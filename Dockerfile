@@ -25,21 +25,17 @@ RUN apt-get update && apt-get install -y \
     && locale-gen en_US.UTF-8 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js 22 LTS via NodeSource
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt-get install -y nodejs \
+# Install Node.js 22 LTS via NodeSource (current official method)
+RUN mkdir -p /etc/apt/keyrings \
+    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+       | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" \
+       > /etc/apt/sources.list.d/nodesource.list \
+    && apt-get update && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Codex CLI globally (must be root for /usr/lib/node_modules)
+# Install Codex CLI globally
 RUN npm install -g @openai/codex
-
-# Install Docker CLI
-RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
-    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
-       https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
-       > /etc/apt/sources.list.d/docker.list \
-    && apt-get update && apt-get install -y docker-ce-cli \
-    && rm -rf /var/lib/apt/lists/*
 
 # Install GitHub CLI
 RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
@@ -51,13 +47,10 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
     && apt-get update && apt-get install -y gh \
     && rm -rf /var/lib/apt/lists/*
 
-# Create a non-root user with sudo and Docker socket access
-# DOCKER_GID must match the host's docker socket GID for passwordless docker access
+# Create a non-root user with sudo access
 ARG USER_UID=1000
-ARG DOCKER_GID=999
-RUN groupadd -f -g ${DOCKER_GID} docker \
-    && useradd -m -s /bin/bash -u ${USER_UID} agent \
-    && usermod -aG docker,sudo agent \
+RUN useradd -m -s /bin/bash -u ${USER_UID} agent \
+    && usermod -aG sudo agent \
     && echo "agent ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/agent
 
 USER agent

@@ -29,9 +29,6 @@ PRIMARY_WORKDIR=$(cd "$1" && pwd)
 docker run --rm -it \
   --name agent-sandbox \
   \
-  `# Docker daemon access` \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  \
   `# Working directories mounted at the same paths as on the host` \
   "${WORKDIR_MOUNTS[@]}" \
   -w "${PRIMARY_WORKDIR}" \

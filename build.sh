@@ -1,6 +1,8 @@
 #!/bin/bash
+VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "dev")
+
 docker build \
   --build-arg USER_UID=$(id -u) \
-  --build-arg DOCKER_GID=$(stat -f "%g" /var/run/docker.sock) \
-  -t agent-sandbox \
+  -t agent-sandbox:${VERSION} \
+  -t agent-sandbox:latest \
   .
