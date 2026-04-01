@@ -35,8 +35,8 @@ RUN mkdir -p /etc/apt/keyrings \
     && apt-get update && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Codex CLI globally
-RUN npm install -g @openai/codex
+# Install Codex CLI and lark-cli globally
+RUN npm install -g @openai/codex @larksuite/cli
 
 # Install GitHub CLI
 RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
@@ -46,6 +46,15 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
        https://cli.github.com/packages stable main" \
        > /etc/apt/sources.list.d/github-cli.list \
     && apt-get update && apt-get install -y gh \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install draw.io desktop (arch-aware: amd64 or arm64)
+RUN ARCH=$(dpkg --print-architecture) \
+    && curl -fsSL "https://github.com/jgraph/drawio-desktop/releases/download/v29.6.6/drawio-${ARCH}-29.6.6.deb" \
+       -o /tmp/drawio.deb \
+    && apt-get update \
+    && apt-get install -y /tmp/drawio.deb xvfb \
+    && rm /tmp/drawio.deb \
     && rm -rf /var/lib/apt/lists/*
 
 # Bake global agent instructions into the image
