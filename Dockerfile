@@ -62,7 +62,8 @@ COPY container-instructions.md /CLAUDE.md
 
 # Create a non-root user with sudo access
 ARG USER_UID=1000
-RUN useradd -m -s /bin/bash -u ${USER_UID} agent \
+RUN userdel -r ubuntu 2>/dev/null || true \
+    && useradd -m -s /bin/bash -u ${USER_UID} agent \
     && usermod -aG sudo agent \
     && echo "agent ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/agent \
     && chown agent:agent /CLAUDE.md
