@@ -3,6 +3,7 @@ FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=en_US.UTF-8
 ENV LC_ALL=en_US.UTF-8
+ENV UV_PROJECT_ENVIRONMENT=.linux_venv
 
 # Install base dependencies and common dev tools
 RUN apt-get update && apt-get install -y \
@@ -47,11 +48,15 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
     && apt-get update && apt-get install -y gh \
     && rm -rf /var/lib/apt/lists/*
 
+# Bake global agent instructions into the image
+COPY container-instructions.md /CLAUDE.md
+
 # Create a non-root user with sudo access
 ARG USER_UID=1000
 RUN useradd -m -s /bin/bash -u ${USER_UID} agent \
     && usermod -aG sudo agent \
-    && echo "agent ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/agent
+    && echo "agent ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/agent \
+    && chown agent:agent /CLAUDE.md
 
 USER agent
 WORKDIR /home/agent
@@ -62,5 +67,8 @@ RUN curl -fsSL https://claude.ai/install.sh | bash
 
 # Install uv (Python package manager)
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Symlink AGENTS.md -> /CLAUDE.md so Codex reads the same instructions (CODEX_HOME defaults to ~)
+RUN ln -s /CLAUDE.md /home/agent/AGENTS.md
 
 CMD ["bash"]
