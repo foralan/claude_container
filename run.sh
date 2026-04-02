@@ -40,4 +40,4 @@ docker run --rm -it \
   `# Git identity` \
   -v "$STORAGE_DIR/.gitconfig:/home/agent/.gitconfig" \
   \
-  agent-sandbox
+  ghcr.io/foralan/agent-sandbox:latest
