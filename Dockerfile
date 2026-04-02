@@ -57,19 +57,21 @@ RUN ARCH=$(dpkg --print-architecture) \
     && rm /tmp/drawio.deb \
     && rm -rf /var/lib/apt/lists/*
 
-# Bake global agent instructions into the image
-COPY container-instructions.md /CLAUDE.md
-
 # Create a non-root user with sudo access
 ARG USER_UID=1000
 RUN userdel -r ubuntu 2>/dev/null || true \
     && useradd -m -s /bin/bash -u ${USER_UID} agent \
     && usermod -aG sudo agent \
-    && echo "agent ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/agent \
-    && chown agent:agent /CLAUDE.md
+    && echo "agent ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/agent
+
+# Bake global agent instructions into the image
+COPY --chown=agent:agent image/container-instructions.md /home/agent/.container.claude/CLAUDE.md
 
 USER agent
 WORKDIR /home/agent
+
+# Suppress Ubuntu's "sudo hint" message on shell start
+RUN touch /home/agent/.sudo_as_admin_successful
 
 # Install Claude Code via official shell script
 ENV PATH="/home/agent/.local/bin:$PATH"
@@ -78,7 +80,10 @@ RUN curl -fsSL https://claude.ai/install.sh | bash
 # Install uv (Python package manager)
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Symlink AGENTS.md -> /CLAUDE.md so Codex reads the same instructions (CODEX_HOME defaults to ~)
-RUN ln -s /CLAUDE.md /home/agent/AGENTS.md
+# Symlink AGENTS.md -> CLAUDE.md so Codex reads the same instructions (CODEX_HOME defaults to ~)
+RUN ln -s /home/agent/.container.claude/CLAUDE.md /home/agent/AGENTS.md
+
+# Convenience aliases and venv reminders
+COPY --chown=agent:agent image/bashrc /home/agent/.bashrc
 
 CMD ["bash"]
