@@ -26,8 +26,9 @@ done
 # First directory becomes the container's working directory
 PRIMARY_WORKDIR=$(cd "$1" && pwd)
 
-docker run --rm -it \
+docker run -itd \
   --name agent-sandbox \
+  --hostname sandbox \
   \
   `# Working directories mounted at the same paths as on the host` \
   "${WORKDIR_MOUNTS[@]}" \
