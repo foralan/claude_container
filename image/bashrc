@@ -4,8 +4,19 @@
 export SUDO_HINT_SHOWN=1
 
 # Agent shortcuts
-alias claude-yolo='claude --dangerously-skip-permissions'
-alias codex-yolo='codex --dangerously-bypass-approvals-and-sandbox'
+alias ccy='claude --dangerously-skip-permissions --add-dir ~/.container.claude'
+alias cx-yolo='codex --dangerously-bypass-approvals-and-sandbox'
+
+# Auto-install VS Code extensions on first connection
+# `code` CLI is only available when VS Code Remote is connected
+if command -v code &>/dev/null && [ ! -f ~/.vscode-extensions-installed ]; then
+    echo "[container] Installing VS Code extensions..."
+    while IFS= read -r ext || [ -n "$ext" ]; do
+        [[ "$ext" =~ ^#|^$ ]] && continue
+        code --install-extension "$ext" --force &>/dev/null && echo "  + $ext" || echo "  ! $ext (failed)"
+    done < ~/.container.claude/vscode-extensions.txt
+    touch ~/.vscode-extensions-installed
+fi
 
 # Python venv helpers
 # .venv (if present) is built for macOS — never use it inside this container

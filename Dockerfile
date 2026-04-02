@@ -66,6 +66,7 @@ RUN userdel -r ubuntu 2>/dev/null || true \
 
 # Bake global agent instructions into the image
 COPY --chown=agent:agent image/container-instructions.md /home/agent/.container.claude/CLAUDE.md
+COPY --chown=agent:agent image/vscode-extensions.txt /home/agent/.container.claude/vscode-extensions.txt
 
 USER agent
 WORKDIR /home/agent
@@ -79,6 +80,10 @@ RUN curl -fsSL https://claude.ai/install.sh | bash
 
 # Install uv (Python package manager)
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Bake VS Code user settings (enables Claude Code auto-approve inside container)
+RUN mkdir -p /home/agent/.config/Code/User
+COPY --chown=agent:agent image/vscode-settings.json /home/agent/.config/Code/User/settings.json
 
 # Symlink AGENTS.md -> CLAUDE.md so Codex reads the same instructions (CODEX_HOME defaults to ~)
 RUN ln -s /home/agent/.container.claude/CLAUDE.md /home/agent/AGENTS.md

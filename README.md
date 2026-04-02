@@ -40,6 +40,17 @@ On first run, log in to each tool as needed — credentials are persisted via th
 - **Codex**: set `OPENAI_API_KEY`
 - **GitHub CLI**: run `gh auth login`
 
+## Yolo aliases
+
+The image ships two convenience aliases for autonomous operation:
+
+```bash
+ccy           # claude --dangerously-skip-permissions --add-dir ~/.container.claude
+cx-yolo       # codex --dangerously-bypass-approvals-and-sandbox
+```
+
+`--add-dir ~/.container.claude` gives Claude Code access to `~/.container.claude/CLAUDE.md`, which is baked into the image and contains instructions specific to this container environment.
+
 ## Git identity
 
 Your `~/.gitconfig` is mounted read-only, so Git identity carries over automatically from the host. If you don't have one set on the host:
