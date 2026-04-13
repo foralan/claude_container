@@ -16,13 +16,18 @@ RUN apt-get update && apt-get install -y \
     lsb-release \
     make \
     nano \
+    openssh-client \
     ripgrep \
     sudo \
+    tmux \
     unzip \
     vim \
     wget \
     zip \
     locales \
+    pipx \
+    python3-pip \
+    python3-venv \
     && locale-gen en_US.UTF-8 \
     && rm -rf /var/lib/apt/lists/*
 
@@ -80,6 +85,9 @@ RUN curl -fsSL https://claude.ai/install.sh | bash
 
 # Install uv (Python package manager)
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install crawl4ai and Playwright Chromium browser
+RUN pipx install crawl4ai && crawl4ai-setup
 
 # Bake VS Code user settings (enables Claude Code auto-approve inside container)
 RUN mkdir -p /home/agent/.config/Code/User
