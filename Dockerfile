@@ -62,6 +62,11 @@ RUN ARCH=$(dpkg --print-architecture) \
     && rm /tmp/drawio.deb \
     && rm -rf /var/lib/apt/lists/*
 
+# LibreOffice + Poppler for PPTX/PDF workflows
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libreoffice-impress libreoffice-common poppler-utils \
+    && rm -rf /var/lib/apt/lists/*
+
 # Create a non-root user with sudo access
 ARG USER_UID=1000
 RUN userdel -r ubuntu 2>/dev/null || true \
@@ -90,6 +95,9 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Install crawl4ai and Playwright Chromium browser
 RUN pipx install crawl4ai && crawl4ai-setup
+
+# Install markitdown for PPTX text extraction
+RUN pipx install "markitdown[pptx]"
 
 # Bake VS Code user settings (enables Claude Code auto-approve inside container)
 RUN mkdir -p /home/agent/.config/Code/User
