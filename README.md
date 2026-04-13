@@ -45,11 +45,11 @@ On first run, log in to each tool as needed — credentials are persisted via th
 The image ships two convenience aliases for autonomous operation:
 
 ```bash
-ccy           # claude --dangerously-skip-permissions --add-dir ~/.container.claude
+ccy           # claude --dangerously-skip-permissions
 cx-yolo       # codex --dangerously-bypass-approvals-and-sandbox
 ```
 
-`--add-dir ~/.container.claude` gives Claude Code access to `~/.container.claude/CLAUDE.md`, which is baked into the image and contains instructions specific to this container environment.
+Container instructions are baked into `/etc/claude-code/CLAUDE.md` (Linux managed policy path), which Claude Code auto-loads at conversation start.
 
 ## Git identity
 

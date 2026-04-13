@@ -7,7 +7,7 @@ A Docker sandbox image for running AI coding agents (Claude Code, Codex) on Ubun
 - `Dockerfile` — image definition
 - `build.sh` — builds the image, tags with git version
 - `run.sh` — runs the container with persistent config and working directory mounts
-- `container-instructions.md` — baked into the image as `/CLAUDE.md`; read by Claude Code and Codex inside the container as global instructions
+- `container-instructions.md` — baked into the image as `/etc/claude-code/CLAUDE.md` (managed policy); auto-loaded by Claude Code on Linux, symlinked to `~/AGENTS.md` for Codex
 
 ## How versioning works
 

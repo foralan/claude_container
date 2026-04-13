@@ -69,9 +69,11 @@ RUN userdel -r ubuntu 2>/dev/null || true \
     && usermod -aG sudo agent \
     && echo "agent ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/agent
 
-# Bake global agent instructions into the image
-COPY --chown=agent:agent image/container-instructions.md /home/agent/.container.claude/CLAUDE.md
-COPY --chown=agent:agent image/vscode-extensions.txt /home/agent/.container.claude/vscode-extensions.txt
+# Bake managed policy (auto-loaded by Claude Code on Linux)
+COPY image/container-instructions.md /etc/claude-code/CLAUDE.md
+
+# VS Code extensions list
+COPY --chown=agent:agent image/vscode-extensions.txt /home/agent/.vscode-extensions.txt
 
 USER agent
 WORKDIR /home/agent
@@ -94,7 +96,7 @@ RUN mkdir -p /home/agent/.config/Code/User
 COPY --chown=agent:agent image/vscode-settings.json /home/agent/.config/Code/User/settings.json
 
 # Symlink AGENTS.md -> CLAUDE.md so Codex reads the same instructions (CODEX_HOME defaults to ~)
-RUN ln -s /home/agent/.container.claude/CLAUDE.md /home/agent/AGENTS.md
+RUN ln -s /etc/claude-code/CLAUDE.md /home/agent/AGENTS.md
 
 # Convenience aliases and venv reminders
 COPY --chown=agent:agent image/bashrc /home/agent/.bashrc
