@@ -6,6 +6,7 @@ export SUDO_HINT_SHOWN=1
 # Agent shortcuts
 alias ccy='claude --dangerously-skip-permissions'
 alias cx-yolo='codex --dangerously-bypass-approvals-and-sandbox'
+alias ccusage='npx ccusage@latest'
 
 # Auto-install VS Code extensions on first connection
 # `code` CLI is only available when VS Code Remote is connected
