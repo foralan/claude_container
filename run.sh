@@ -14,7 +14,6 @@ fi
 # Ensure persistent storage directories exist
 mkdir -p "$STORAGE_DIR/.claude"
 mkdir -p "$STORAGE_DIR/.codex"
-touch "$STORAGE_DIR/.gitconfig"
 
 # Build volume mounts for all provided directories
 WORKDIR_MOUNTS=()
@@ -25,6 +24,39 @@ done
 
 # First directory becomes the container's working directory
 PRIMARY_WORKDIR=$(cd "$1" && pwd)
+
+# Generate runtime info file (regenerated every run) — mounted read-only at
+# /etc/container-runtime-info.md so the agent can discover host/mount details.
+RUNTIME_INFO="$STORAGE_DIR/runtime-info.md"
+{
+  echo "# Container Runtime Info"
+  echo
+  echo "_Generated at \`docker run\` time; regenerated on every launch._"
+  echo "_Timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")_"
+  echo
+  echo "## Host"
+  echo
+  echo "- OS: $(uname -s) ($(uname -r))"
+  echo "- Arch: $(uname -m)"
+  echo "- Hostname: $(hostname)"
+  echo "- User: $(whoami) (UID=$(id -u), GID=$(id -g))"
+  echo
+  echo "## Mounts"
+  echo
+  echo "| Host path | Container path | Purpose |"
+  echo "|---|---|---|"
+  for dir in "$@"; do
+    abs=$(cd "$dir" && pwd)
+    echo "| \`$abs\` | \`$abs\` | Working directory |"
+  done
+  echo "| \`$STORAGE_DIR/.claude\` | \`/home/agent/.claude\` | Claude Code config (persistent) |"
+  echo "| \`$STORAGE_DIR/.codex\` | \`/home/agent/.codex\` | Codex config (persistent) |"
+  echo "| \`/var/run/docker.sock\` | \`/var/run/docker.sock\` | Host Docker daemon socket |"
+  echo
+  echo "## Primary Working Directory"
+  echo
+  echo "\`$PRIMARY_WORKDIR\`"
+} > "$RUNTIME_INFO"
 
 docker run -itd \
   --name agent-sandbox \
@@ -43,7 +75,7 @@ docker run -itd \
   -v "$STORAGE_DIR/.claude:/home/agent/.claude" \
   -v "$STORAGE_DIR/.codex:/home/agent/.codex" \
   \
-  `# Git identity` \
-  -v "$STORAGE_DIR/.gitconfig:/home/agent/.gitconfig" \
+  `# Runtime-generated host/mount summary for the agent to read` \
+  -v "$RUNTIME_INFO:/etc/container-runtime-info.md:ro" \
   \
   ghcr.io/foralan/agent-sandbox:latest

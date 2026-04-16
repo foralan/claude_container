@@ -2,13 +2,44 @@
 
 ## Environment
 
-You are running inside a Docker container (Ubuntu 24.04) on a Mac host via Docker Desktop.
+You are running inside a **Docker container (Ubuntu 24.04 LTS)**. You are the non-root user `agent` with passwordless `sudo`. The shell is `bash`. Do **not** assume anything about the host operating system — check `/etc/container-runtime-info.md` (see next section) to learn what it is.
+
+## Host & Mount Info
+
+Details about the host machine and the directories mounted into this container are written at **`/etc/container-runtime-info.md`**. This file is regenerated every time the container is launched. Read it when you need to know:
+
+- What OS/arch the host is running
+- Which host paths are mounted into the container and where
+- Your primary working directory
+
+## Preinstalled Tools
+
+This image ships with the following so you do not need to install them yourself:
+
+| Category | Tools |
+|---|---|
+| AI CLIs | `claude` (Claude Code), `codex` (OpenAI Codex), `@larksuite/cli` |
+| VCS | `git`, `gh` (GitHub CLI) |
+| Container | `docker` CLI (talks to the host Docker daemon via mounted socket) |
+| Node.js | Node 22 LTS + `npm`, `npx` |
+| Python | `python3`, `pip`, `pipx`, `uv` |
+| Python apps | `crawl4ai` (with Playwright Chromium), `markitdown[pptx]` |
+| Office/PDF | `libreoffice-impress`, `poppler-utils` (pdftoppm, pdftotext, …) |
+| Diagrams | `drawio` Desktop + `xvfb`/`xvfb-run` for headless export |
+| Shell / editors | `bash`, `tmux`, `vim`, `nano` |
+| Search / JSON | `ripgrep` (`rg`), `jq` |
+| Net / archive | `curl`, `wget`, `zip`, `unzip`, `openssh-client` |
+| Build | `build-essential`, `make` |
+
+Useful aliases (from `~/.bashrc`):
+
+- `venv-check` → reports `.venv` / `.linux_venv` state in the current dir
 
 ## Network
 
 The container uses **bridge mode** networking. Do not use `localhost` to reach services on the host machine — it will only resolve to the container itself.
 
-To reach a service running on the Mac host, use:
+To reach a service running on the host, use:
 ```
 host.docker.internal:<port>
 ```
@@ -17,7 +48,7 @@ Examples:
 - PostgreSQL on the host: `host.docker.internal:5432`
 - A local web server: `host.docker.internal:8080`
 
-This works for any port without any extra configuration.
+This works on Docker Desktop (macOS/Windows) out of the box. On native Linux Docker it only resolves if the container was started with `--add-host=host.docker.internal:host-gateway` — check `/etc/container-runtime-info.md` for the host OS, and fall back to the host's actual IP if needed.
 
 ## Python Virtual Environments
 
@@ -31,10 +62,10 @@ source .linux_venv/bin/activate
 
 ### Why `.linux_venv` instead of `.venv`
 
-Projects mounted from the Mac host may already contain a `.venv` directory — built for macOS (darwin/arm64 or darwin/x86_64). Those binaries are **incompatible** with this Linux container and must not be used.
+Projects mounted from the host may already contain a `.venv` directory built for the host's OS/arch (e.g. darwin/arm64 if the host is a Mac). Those binaries are **incompatible** with this Linux container and must not be used. Check `/etc/container-runtime-info.md` to see the host's OS and arch.
 
 Key rules:
-- **Never activate or use `.venv`** — it may exist but is built for macOS.
+- **Never activate or use `.venv`** — if it exists, it was built for the host and will not run here.
 - **Always use `.linux_venv`** for any Python work inside the container.
 - If a tool or script hardcodes `.venv` (e.g. `source .venv/bin/activate`), replace or override with `.linux_venv`.
 - When checking whether a venv is healthy, verify the platform: `python -c "import platform; print(platform.system())"` should print `Linux`.

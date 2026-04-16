@@ -8,8 +8,9 @@ A Docker image running [Claude Code](https://claude.ai/code) and [Codex](https:/
 ./build.sh
 ```
 
-This passes one build arg:
+This passes two build args:
 - `USER_UID` — your host UID, so `agent` can read/write mounted files without `sudo`
+- `DOCKER_GID` — the host's Docker socket GID (auto-detected on macOS/Linux), so `agent` can talk to the host Docker daemon without `sudo`
 
 ## Run
 
@@ -30,7 +31,8 @@ The script mounts:
 | Working directories | each arg | same path as host | read/write, first is `-w` |
 | Claude Code config | `./storage/.claude` | `/home/agent/.claude` | persistent |
 | Codex config | `./storage/.codex` | `/home/agent/.codex` | persistent |
-| Git config | `./storage/.gitconfig` | `/home/agent/.gitconfig` | read/write |
+| Docker socket | `/var/run/docker.sock` | `/var/run/docker.sock` | host Docker daemon |
+| Runtime info | `./storage/runtime-info.md` | `/etc/container-runtime-info.md` | regenerated each run |
 
 ## Authentication
 
@@ -46,14 +48,15 @@ The image ships two convenience aliases for autonomous operation:
 
 ```bash
 ccy           # claude --dangerously-skip-permissions
-cx-yolo       # codex --dangerously-bypass-approvals-and-sandbox
+cxy           # codex --dangerously-bypass-approvals-and-sandbox
+ccusage       # npx ccusage@latest
 ```
 
 Container instructions are baked into `/etc/claude-code/CLAUDE.md` (Linux managed policy path), which Claude Code auto-loads at conversation start.
 
 ## Git identity
 
-Your `~/.gitconfig` is mounted read-only, so Git identity carries over automatically from the host. If you don't have one set on the host:
+`~/.gitconfig` is **not** mounted from the host. Set your identity once inside the container (it persists via `~/.claude` / `~/.codex` if your tooling stores it there) or export it via env vars:
 
 ```bash
 git config --global user.name "Your Name"
@@ -62,15 +65,19 @@ git config --global user.email "you@example.com"
 
 ## What's installed
 
-| Tool | Install method |
-|---|---|
-| Node.js 22 LTS | NodeSource |
-| Claude Code | Official shell script (auto-updates) |
-| Codex CLI | npm |
-| uv | Official shell script |
-| GitHub CLI (`gh`) | GitHub apt repo |
-| ripgrep | apt |
-| Common dev tools | apt (`build-essential`, `jq`, `vim`, `nano`, `make`, `wget`, `zip/unzip`) |
+| Category | Tool | Install method |
+|---|---|---|
+| AI CLIs | Claude Code | Official shell script (auto-updates) |
+| AI CLIs | Codex CLI, `@larksuite/cli` | npm |
+| Runtime | Node.js 22 LTS | NodeSource |
+| Runtime | Python 3 + `pipx`, `uv` | apt + official installer |
+| Container | Docker CLI | Docker apt repo (socket mounted from host) |
+| VCS | GitHub CLI (`gh`), `git` | GitHub apt repo / apt |
+| Search / JSON | `ripgrep`, `jq` | apt |
+| Office / PDF | LibreOffice Impress, Poppler, `markitdown[pptx]` | apt / pipx |
+| Diagrams | draw.io Desktop + `xvfb` | GitHub release / apt |
+| Web scraping | `crawl4ai` (Playwright Chromium) | pipx |
+| Dev tools | `build-essential`, `jq`, `vim`, `nano`, `make`, `wget`, `zip/unzip`, `tmux`, `openssh-client` | apt |
 
 ## Accessing host services from the container
 
@@ -86,57 +93,18 @@ curl http://host.docker.internal:8080
 
 This works for any service running on the host without any extra flags in `run.sh`.
 
-## Adding Docker CLI access
+## Docker CLI access
 
-Docker is not installed by default. To enable the agent to run `docker` commands:
-
-**1. Add Docker CLI to the image** — in [Dockerfile](Dockerfile), after the GitHub CLI block:
-
-```dockerfile
-RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
-    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
-       https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
-       > /etc/apt/sources.list.d/docker.list \
-    && apt-get update && apt-get install -y docker-ce-cli \
-    && rm -rf /var/lib/apt/lists/*
-```
-
-Also add the docker group to the user creation step:
-
-```dockerfile
-ARG DOCKER_GID=999
-RUN groupadd -f -g ${DOCKER_GID} docker \
-    && useradd -m -s /bin/bash -u ${USER_UID} agent \
-    && usermod -aG docker,sudo agent \
-    && echo "agent ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/agent
-```
-
-**2. Pass `DOCKER_GID` at build time** — in [build.sh](build.sh):
+Docker CLI is included in the image and the host's `/var/run/docker.sock` is mounted into the container, so `agent` can run `docker` commands against the host Docker daemon:
 
 ```bash
-if [[ "$(uname)" == "Darwin" ]]; then
-  DOCKER_GID=$(stat -f "%g" /var/run/docker.sock)
-else
-  DOCKER_GID=$(stat -c "%g" /var/run/docker.sock)
-fi
-
-docker build \
-  --build-arg USER_UID=$(id -u) \
-  --build-arg DOCKER_GID="$DOCKER_GID" \
-  -t agent-sandbox \
-  .
+docker ps          # lists host containers
+docker build ...   # uses host's daemon; images land on the host
 ```
 
-**3. Mount the socket and add GID 0 at runtime** — in [run.sh](run.sh):
-
-```bash
--v /var/run/docker.sock:/var/run/docker.sock \
---group-add 0 \      # Docker Desktop for Mac: socket is GID 0 inside container
---group-add docker \ # Linux: matches the DOCKER_GID baked into the image
-```
-
-> On Docker Desktop for Mac the socket always appears as GID 0 inside the container, regardless of `DOCKER_GID`. The `--group-add 0` handles this at runtime.
+`build.sh` auto-detects the host socket's GID (macOS uses `stat -f`, Linux uses `stat -c`) and bakes it into the image's `docker` group. `run.sh` also passes `--group-add 0` because on Docker Desktop for Mac the socket always appears as GID 0 inside the container regardless of the baked-in `DOCKER_GID`.
 
 ## Notes
 
 - The container runs as a non-root user (`agent`) with passwordless `sudo`.
+- `/etc/container-runtime-info.md` inside the container is regenerated at every `docker run` and describes the host OS and all mounts — handy for the agent.
