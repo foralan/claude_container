@@ -30,6 +30,11 @@ docker run -itd \
   --name agent-sandbox \
   --hostname sandbox \
   \
+  `# Docker daemon access` \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  --group-add 0 \
+  --group-add docker \
+  \
   `# Working directories mounted at the same paths as on the host` \
   "${WORKDIR_MOUNTS[@]}" \
   -w "${PRIMARY_WORKDIR}" \
